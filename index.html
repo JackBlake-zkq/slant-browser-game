@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Swing Rope</title>
+        <style>
+
+        </style>
+    </head>
+    <body>
+
+        <section id="registerSection">
+            <form id="registerForm">
+                <h1>Register</h1>
+                <label for="email">Email</label>
+                <input type=text id="registerEmail" name="email">
+                <label for="password">Password</label>
+                <input type=text id="registerPassword" namne="password">
+                <input type="submit">
+            </form>
+        </section>
+        
+        <section id="loginSection">
+            <h1>Login</h1>
+            <form id="loginForm">
+                <label for="email">Email</label>
+                <input type=text id="loginEmail" name="email">
+                <label for="password">Password</label>
+                <input type=text id="loginPassword" name=password>
+                <input type="submit">
+            </form>
+            <p>Don't have an account?</p>
+            <button id="registerButton">Register</button>
+        </section>
+        
+        <section id="codeSection">
+            <form id="codeForm">
+                <h1>Confirmation Code</h1>
+                <input type=text id="code" name="code">
+                <input type="submit">
+            </form>
+        </section>
+
+        <section id="menu">
+
+        </section>
+
+        <section id="leaderboard">
+
+        </section>
+       
+        
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+            const $ = id => document.getElementById(id);
+            
+            $('loginSection').style.display='none';
+            $('registerSection').style.display='none';
+            $('codeSection').style.display='none';
+            
+            let currEmail = '';
+
+            $('registerForm').onsubmit = e => {
+                e.preventDefault();
+                currEmail = $('registerEmail').value;
+                socket.emit('register', {
+                    email: currEmail,
+                    password: $('registerPassword').value
+                });
+            }
+            $('loginForm').onsubmit = e => {
+                e.preventDefault();
+                currEmail = $('loginEmail').value;
+                socket.emit('loginAttempt', {
+                    email: currEmail,
+                    password: $('loginPassword').value
+                });
+            }
+            $('codeForm').onsubmit = e => {
+                e.preventDefault();
+                socket.emit('codeAttempt', {
+                    email: currEmail,
+                    code: $('code').value
+                });
+            }
+
+            $('registerButton').onclick = e => {
+                $('loginSection').style.display='none';
+                $('registerSection').style.display='';
+                $('codeSection').style.display='none';
+            }
+            socket.on('codePrompt', () => {
+                $('loginSection').style.display='none';
+                $('registerSection').style.display='none';
+                $('codeSection').style.display='';
+            });
+            socket.on('loginPrompt', () => {
+                $('loginSection').style.display='';
+                $('registerSection').style.display='none';
+                $('codeSection').style.display='none';
+            });
+
+            //Problems
+            socket.on('failedEmail', () => {
+                console.log('Failed Confirmation Email');
+            });
+            socket.on('emailTaken', () => {
+                console.log('Email Taken');
+            });
+            socket.on('wrongCode', () => {
+                console.log('Wrong Code');
+            });
+            socket.on('emailNotFound', () => {
+                console.log('Email Not Found');
+            });
+            socket.on('wrongPassword', () => {
+                console.log('Wrong Password');
+            });
+            socket.on('badData', () => {
+                console.log('Bad Data');
+            });
+
+            //for successfully authenticated clients
+            socket.on('authenticated', () => {
+                $('loginSection').style.display='none';
+                $('registerSection').style.display='none';
+                $('codeSection').style.display='none';
+                console.log('authenticated');
+            });
+
+            socket.on('admin', () => {
+                console.log('admin');
+            });
+            
+            
+
+        </script>
+    </body>
+</html>
