@@ -255,7 +255,7 @@ io.on('connection', socket => {
                                 
                                 bouncesLeft--;
                             }
-                            socket.emit('animate', instructions);
+                            socket.emit('animatewkefbiwbaeifgbi', instructions);
                         }
                     });
                 }
