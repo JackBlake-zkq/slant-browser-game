@@ -1,140 +1,482 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Swing Rope</title>
-        <style>
 
-        </style>
-    </head>
-    <body>
+<head>
+    <title>Swing Rope</title>
+    <style>
+        html{
+            margin:0;
+        }
+        body{
+            margin:0;
+        }
+        svg {
+            width:50%;
+            height:50%;
+            margin-left:25%;
+            background: lightgray;
+        }
+    </style>
+</head>
 
-        <section id="registerSection">
-            <form id="registerForm">
-                <h1>Register</h1>
-                <label for="email">Email</label>
-                <input type=text id="registerEmail" name="email">
-                <label for="password">Password</label>
-                <input type=text id="registerPassword" namne="password">
-                <input type="submit">
-            </form>
-        </section>
-        
-        <section id="loginSection">
-            <h1>Login</h1>
-            <form id="loginForm">
-                <label for="email">Email</label>
-                <input type=text id="loginEmail" name="email">
-                <label for="password">Password</label>
-                <input type=text id="loginPassword" name=password>
-                <input type="submit">
-            </form>
-            <p>Don't have an account?</p>
-            <button id="registerButton">Register</button>
-        </section>
-        
-        <section id="codeSection">
-            <form id="codeForm">
-                <h1>Confirmation Code</h1>
-                <input type=text id="code" name="code">
-                <input type="submit">
-            </form>
-        </section>
+<body>
 
-        <section id="menu">
+    <section id="registerSection">
+        <form id="registerForm">
+            <h1>Register</h1>
+            <label for="email">Email</label>
+            <input type=text id="registerEmail" name="email">
+            <label for="username">Username</label>
+            <input type=text id="registerUsername" name="username">
+            <label for="password">Password</label>
+            <input type=text id="registerPassword" namne="password">
+            <input type="submit">
+        </form>
+    </section>
 
-        </section>
+    <section id="loginSection">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <label for="email">Email</label>
+            <input type=text id="loginEmail" name="email">
+            <label for="password">Password</label>
+            <input type=text id="loginPassword" name=password>
+            <input type="submit">
+        </form>
+        <p>Don't have an account?</p>
+        <button id="registerButton">Register</button>
+    </section>
 
-        <section id="leaderboard">
+    <section id="codeSection">
+        <form id="codeForm">
+            <h1>Confirmation Code</h1>
+            <input type=text id="code" name="code">
+            <input type="submit">
+        </form>
+    </section>
 
-        </section>
-       
-        
+    <section id="menuSection">
+        <div id="levels">
 
-        <script src="/socket.io/socket.io.js"></script>
-        <script>
-            const socket = io();
-            const $ = id => document.getElementById(id);
-            
-            $('loginSection').style.display='none';
-            $('registerSection').style.display='none';
-            $('codeSection').style.display='none';
-            
-            let currEmail = '';
+        </div>
+        <button id="createLevelButton">Create Level</button>
+    </section>
 
-            $('registerForm').onsubmit = e => {
-                e.preventDefault();
-                currEmail = $('registerEmail').value;
-                socket.emit('register', {
-                    email: currEmail,
-                    password: $('registerPassword').value
+    <section id="createLevelSection">
+        <label for="name">Level Name</label>
+        <input type="text" name="name" id="createLevelName">
+        <label for="bounces">Maximum Bounces</label>
+        <input type="text" name="bounces" id="createLevelBounces">
+        <div id="toolSelect">
+            <button id="selectLineTool">Wall</button>
+            <button id="selectGoalTool">Goal</button>
+            <button id="selectStartTool">Start Point</button>
+        </div>
+        <svg id="svg2" viewBox="0 0 100 100"></svg>
+        <button id="submitLevel">Upload Level</button>
+    </section>
+
+    <section id="levelPlaySection">
+        <div id="levelLeaderboard"></div>
+        <svg id="svg" viewBox="0 0 100 100"></svg>
+    </section>
+
+
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/snap.svg/0.5.1/snap.svg-min.js" integrity="sha512-Gk+uNk8NWN235mIkS6B7/424TsDuPDaoAsUekJCKTWLKP6wlaPv+PBGfO7dbvZeibVPGW+mYidz0vL0XaWwz4w==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        const socket = io();
+        const $ = id => document.getElementById(id);
+        const s = Snap('#svg');
+        const s2 = Snap('#svg2');
+
+        clearSections();
+
+        let currEmail = '';
+
+        $('registerForm').onsubmit = e => {
+            e.preventDefault();
+            currEmail = $('registerEmail').value;
+            socket.emit('register', {
+                email: currEmail,
+                username: $('registerUsername').value,
+                password: $('registerPassword').value
+            });
+        }
+        $('loginForm').onsubmit = e => {
+            e.preventDefault();
+            currEmail = $('loginEmail').value;
+            socket.emit('loginAttempt', {
+                email: currEmail,
+                password: $('loginPassword').value
+            });
+        }
+        $('codeForm').onsubmit = e => {
+            e.preventDefault();
+            socket.emit('codeAttempt', {
+                email: currEmail,
+                code: $('code').value
+            });
+        }
+
+
+        $('registerButton').onclick = e => {
+            clearSections();
+            $('registerSection').style.display = '';
+        }
+        socket.on('codePrompt', () => {
+            clearSections();
+            $('codeSection').style.display = '';
+        });
+        socket.on('loginPrompt', () => {
+            clearSections();
+            $('loginSection').style.display = '';
+        });
+
+        //Problems during authentication
+        socket.on('failedEmail', () => {
+            alert('Failed Confirmation Email');
+        });
+        socket.on('emailTaken', () => {
+            alert('Email Taken');
+        });
+        socket.on('wrongCode', () => {
+            alert('Wrong Code');
+        });
+        socket.on('emailNotFound', () => {
+            alert('Email Not Found');
+        });
+        socket.on('wrongPassword', () => {
+            alert('Wrong Password');
+        });
+
+        //for successfully authenticated clients
+        socket.on('authenticated', async function () {
+            clearSections();
+            $('menuSection').style.display = ''
+
+            getDisplayInfo()
+                .then(data => {
+                    data.forEach(item => {
+                        let div = document.createElement('div');
+                        div.textContent = item.name;
+                        div.addEventListener('click', () => {
+                            getLevelData(item.name)
+                                .then(data => {
+                                    clearSections();
+                                    $('levelPlaySection').style.display = '';
+                                    displayLeaderboard(item.name);
+                                    displayLevel(data, item.name);
+                                })
+                                .catch(error => alert(error));
+                        });
+                        $('levels').appendChild(div);
+                    });
+                })
+                .catch(error => alert(error));
+        });
+
+        async function getDisplayInfo() {
+            return new Promise((resolve, reject) => {
+                socket.emit('getDisplayInfo');
+                socket.on('displayInfo', data => {
+                    resolve(data);
+                });
+                socket.on('notAuthenticated', () => {
+                    reject('Not Authenticated')
+                });
+                setTimeout(() => reject('Timed out'), 5000);
+            });
+        }
+
+        async function getLevelData(name) {
+            return new Promise((resolve, reject) => {
+                socket.emit('getLevelData', name);
+                socket.on('levelData', data => {
+                    resolve(data);
+                });
+                socket.on('notAuthenticated', () => {
+                    reject('Not Authenticated')
+                });
+                setTimeout(() => reject('Timed out'), 5000);
+            });
+        }
+
+
+
+        function displayLevel(data, name) {
+            window.removeEventListener('mousemove', levelPlayMouseMoveHandler);
+            window.removeEventListener('click', levelPlayClickHandler);
+
+            clearChildren('svg');
+
+            for (let [key, value] of Object.entries(data.lines)) {
+                createLine({
+                    p1: cartesianToViewBox(value.p1),
+                    p2: cartesianToViewBox(value.p2)
+                }, 'black', 1, s);
+            }
+            createLine({
+                p1: cartesianToViewBox(data.goal.p1),
+                p2: cartesianToViewBox(data.goal.p2)
+            }, 'green', 2, s);
+            createCircle(cartesianToViewBox(data.start), 'blue', 2, s);
+            window.addEventListener('mousemove', levelPlayMouseMoveHandler);
+            window.addEventListener('click', levelPlayClickHandler);
+
+            function levelPlayClickHandler(e){
+                getInstructions(name)
+                    .then(instructions => {
+                        let ball = createCircle(cartesianToViewBox(instructions[0]), 'red', 1, s);
+                        console.log(instructions);
+                        animate(instructions, ball, 0);
+                    })
+                    .catch(error => alert(error));
+            }
+            function levelPlayMouseMoveHandler(e){
+                if ($('targetLine')) $('targetLine').remove();
+                let point = $('svg').createSVGPoint();
+                point.x = e.clientX;
+                point.y = e.clientY;
+                point = point.matrixTransform($('svg').getScreenCTM().inverse());
+                let targetLine = createLine({
+                    p1: cartesianToViewBox(data.start),
+                    p2: point
+                }, 'lightblue', 1, s);
+                targetLine.attr({
+                    id: 'targetLine'
                 });
             }
-            $('loginForm').onsubmit = e => {
-                e.preventDefault();
-                currEmail = $('loginEmail').value;
-                socket.emit('loginAttempt', {
-                    email: currEmail,
-                    password: $('loginPassword').value
+        }
+
+        function displayLeaderboard(name){
+            clearChildren('levelLeaderboard');
+            let h1 = document.createElement('h1');
+            h1.textContent = 'Leaderboard';
+            $('levelLeaderboard').appendChild(h1);
+            getLeaderboard(name)
+            .then( array => {
+                array.forEach(item => {
+                    let elem = document.createElement('div');
+                    elem.textContent = `${item.username}: ${item.bounces}`;
+                    $('levelLeaderboard').appendChild(elem);
                 });
+            });
+        }
+        
+
+        function animate(instructions, ball, index){
+            if(index > instructions.length - 2){
+                ball.remove();
+                return;
             }
-            $('codeForm').onsubmit = e => {
-                e.preventDefault();
-                socket.emit('codeAttempt', {
-                    email: currEmail,
-                    code: $('code').value
+            const speed = 50; //50 units/second
+            let time = (distance(instructions[index], instructions[index + 1]) / speed) * 1000;
+            ball.animate({
+                cx: cartesianToViewBox(instructions[index + 1]).x,
+                cy: cartesianToViewBox(instructions[index + 1]).y
+            }, time);
+            setTimeout( () => animate(instructions, ball, index + 1), time );
+        }
+
+        async function getInstructions(name) {
+            let v = {
+                x: $('targetLine').getAttribute('x2') - $('targetLine').getAttribute('x1'),
+                y: -($('targetLine').getAttribute('y2') - $('targetLine').getAttribute('y1'))
+            };
+            let magV = Math.sqrt(v.x * v.x + v.y * v.y);
+            let angleV = Math.acos(v.x / magV) * (180 / Math.PI);
+            if (v.y < 0) angleV = 360 - angleV;
+            return new Promise((resolve, reject) => {
+                let instructions = null;
+                socket.emit('playLevel', {
+                    name: name,
+                    angle: angleV
                 });
+                socket.on('animateClear', instructions => {
+                    resolve(instructions);
+                });
+                socket.on('animateFail', instructions => {
+                    resolve(instructions);
+                });
+                socket.on('notAuthenticated', () => {
+                    reject('Not Authenticated')
+                });
+                socket.on('badData', () => {
+                    reject('Bad Data');
+                });
+                socket.on('levelDNE', () => {
+                    reject('Level does not exist')
+                });
+                socket.on('ownLevel', () => {
+                    reject('You cannot play your own level after verifying!')
+                });
+                setTimeout(() => reject('Timed out'), 5000);
+            });
+        }
+
+
+        let currLevelObj = null;
+        let lineCount = 0;
+        $('createLevelButton').onclick = e => {
+            clearSections();
+            $('createLevelSection').style.display = '';
+            clearChildren('svg2');
+            currLevelObj = {};
+            lineCount = 0;
+        }
+
+        let currTool = 'line';
+        let lastLinePoint = null;
+        let lastGoalPoint = null;
+        $('svg2').onclick = e => {
+            let point = $('svg2').createSVGPoint();
+            point.x = e.clientX;
+            point.y = e.clientY;
+            point = point.matrixTransform($('svg').getScreenCTM().inverse());
+            if(currTool == 'start'){
+                if(currLevelObj.start) {
+                    alert('You already placed a start point');
+                } else {
+                    createCircle(point, 'blue', 2, s2);
+                    currLevelObj.start = viewBoxToCartesian(point);
+                }
+            } else if(currTool == 'line'){
+                if(lastLinePoint == null){
+                    lastLinePoint = point;
+                    createCircle(point, 'black', 1, s2);
+                } else {
+                    let l = {
+                        p1:lastLinePoint,
+                        p2:point
+                    }
+                    if(currLevelObj.lines == null) currLevelObj.lines = {};
+                    currLevelObj.lines[`line${lineCount++}`] = {
+                        p1: viewBoxToCartesian(l.p1),
+                        p2: viewBoxToCartesian(l.p2)
+                    }
+                    createLine(l, 'black', 1, s2);
+                }
+            } else if(currTool == 'goal'){
+                if(currLevelObj.goal){
+                    alert('you already made a goal');
+                    return;
+                }
+                if(lastGoalPoint == null){
+                    lastGoalPoint = point;
+                    createCircle(point, 'green', 1, s2);
+                } else {
+                    let l = {
+                        p1:lastLinePoint,
+                        p2:point
+                    }
+                    currLevelObj.goal = {
+                        p1: viewBoxToCartesian(l.p1),
+                        p2: viewBoxToCartesian(l.p2)
+                    }
+                    createLine(l, 'green', 1, s2);
+                }
+            } else {
+                alert('No tool selected!')
             }
+        }
 
-            $('registerButton').onclick = e => {
-                $('loginSection').style.display='none';
-                $('registerSection').style.display='';
-                $('codeSection').style.display='none';
+        $('submitLevel').onclick = e => {
+            new Promise( (resolve, reject) => {
+                socket.emit('newLevel', {
+                    lines: currLevelObj.lines,
+                    goal: currLevelObj.goal,
+                    start: currLevelObj.start,
+                    name: $('createLevelName').value,
+                    bounces: $('createLevelBounces').value
+                });
+                socket.on('notAuthenticated', () => {
+                    reject('Not Authenticated');
+                });
+                socket.on('badData', () => {
+                    reject("There's something wrong with your level");
+                });
+                socket.on('nameTaken', () => {
+                    reject('Choose a different name for your level');
+                });
+                socket.on('levelCreated', () => {
+                    resolve();
+                });
+            })
+            .then( () => {
+                //go to verify level
+            })
+            .catch( error => alert(error) )
+        }
+
+        async function getLeaderboard(name){
+            return new Promise( (resolve, reject) => {
+                socket.emit('getLeaderboard', name);
+                socket.on('notAuthenticated', () => {
+                    reject('Not Authenticated');
+                });
+                socket.on('levelDNE', () => {
+                    reject('Level does not exist');
+                });
+                socket.on('leaderboard', leaderboard => {
+                    resolve(leaderboard);
+                });
+            });
+        }
+
+        
+        function clearChildren(id){
+            for(let child of Array.from($(id).children)){
+                child.remove();
             }
-            socket.on('codePrompt', () => {
-                $('loginSection').style.display='none';
-                $('registerSection').style.display='none';
-                $('codeSection').style.display='';
-            });
-            socket.on('loginPrompt', () => {
-                $('loginSection').style.display='';
-                $('registerSection').style.display='none';
-                $('codeSection').style.display='none';
-            });
+        }
 
-            //Problems
-            socket.on('failedEmail', () => {
-                console.log('Failed Confirmation Email');
+        function clearSections() {
+            Array.from(document.querySelectorAll('section')).forEach(item => {
+                item.style.display = 'none';
             });
-            socket.on('emailTaken', () => {
-                console.log('Email Taken');
-            });
-            socket.on('wrongCode', () => {
-                console.log('Wrong Code');
-            });
-            socket.on('emailNotFound', () => {
-                console.log('Email Not Found');
-            });
-            socket.on('wrongPassword', () => {
-                console.log('Wrong Password');
-            });
-            socket.on('badData', () => {
-                console.log('Bad Data');
-            });
+        }
 
-            //for successfully authenticated clients
-            socket.on('authenticated', () => {
-                $('loginSection').style.display='none';
-                $('registerSection').style.display='none';
-                $('codeSection').style.display='none';
-                console.log('authenticated');
-            });
+        function viewBoxToCartesian(point) {
+            return {
+                x: point.x - 50,
+                y: 50 - point.y
+            }
+        }
+        function cartesianToViewBox(point) {
+            return {
+                x: point.x + 50,
+                y: -point.y + 50
+            }
+        }
+        function distance(p1, p2) {
+            return Math.sqrt(
+                (p2.y - p1.y) * (p2.y - p1.y) +
+                (p2.x - p1.x) * (p2.x - p1.x)
+            );
+        }
 
-            socket.on('admin', () => {
-                console.log('admin');
+        function createLine(line, color, thickness, snap) {
+            let snapLine = snap.line(line.p1.x, line.p1.y, line.p2.x, line.p2.y);
+            snapLine.attr({
+                stroke: color,
+                strokeWidth: thickness
             });
-            
-            
+            return snapLine;
+        }
+        function createCircle(point, color, radius, snap) {
+            let snapCircle = snap.circle(point.x, point.y, radius);
+            snapCircle.attr({
+                fill: color,
+                stroke: color
+            });
+            return snapCircle;
+        }
 
-        </script>
-    </body>
+
+
+    </script>
+</body>
+
 </html>
