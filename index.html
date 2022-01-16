@@ -2,19 +2,27 @@
 <html>
 
 <head>
-    <title>Swing Rope</title>
+    <title>Ball Shot</title>
     <style>
+        :root{
+
+        }
         html{
-            margin:0;
+
         }
         body{
-            margin:0;
+            
         }
         svg {
             width:50%;
             height:50%;
             margin-left:25%;
             background: lightgray;
+        }
+        .levelCard{
+            border: 5px solid black;
+            margin: 20px;
+            padding: 20px;
         }
     </style>
 </head>
@@ -60,6 +68,7 @@
 
         </div>
         <button id="createLevelButton">Create Level</button>
+        <button id="myLevelsButton">My Levels</button>
     </section>
 
     <section id="createLevelSection">
@@ -74,11 +83,25 @@
         </div>
         <svg id="svg2" viewBox="0 0 100 100"></svg>
         <button id="submitLevel">Upload Level</button>
+        <button class="menuButton">Back</button>
     </section>
 
     <section id="levelPlaySection">
-        <div id="levelLeaderboard"></div>
         <svg id="svg" viewBox="0 0 100 100"></svg>
+        <button class="menuButton">Back</button>
+    </section>
+
+    <section id="leaderboardSection">
+        <h1>Leaderboard</h1>
+        <div id="levelLeaderboard"></div>
+        <button class="menuButton">Back</button>
+    </section>
+
+    <section id="myLevelsSection">
+        <div id="myLevels">
+
+        </div>
+        <button class="menuButton">Back</button>
     </section>
 
 
@@ -93,6 +116,8 @@
 
         clearSections();
 
+
+        //authentication event listeners and emition
         let currEmail = '';
 
         $('registerForm').onsubmit = e => {
@@ -120,7 +145,7 @@
             });
         }
 
-
+        //authenitication navigation
         $('registerButton').onclick = e => {
             clearSections();
             $('registerSection').style.display = '';
@@ -151,31 +176,8 @@
             alert('Wrong Password');
         });
 
-        //for successfully authenticated clients
-        socket.on('authenticated', async function () {
-            clearSections();
-            $('menuSection').style.display = ''
 
-            getDisplayInfo()
-                .then(data => {
-                    data.forEach(item => {
-                        let div = document.createElement('div');
-                        div.textContent = item.name;
-                        div.addEventListener('click', () => {
-                            getLevelData(item.name)
-                                .then(data => {
-                                    clearSections();
-                                    $('levelPlaySection').style.display = '';
-                                    displayLeaderboard(item.name);
-                                    displayLevel(data, item.name);
-                                })
-                                .catch(error => alert(error));
-                        });
-                        $('levels').appendChild(div);
-                    });
-                })
-                .catch(error => alert(error));
-        });
+        //data getters
 
         async function getDisplayInfo() {
             return new Promise((resolve, reject) => {
@@ -199,85 +201,11 @@
                 socket.on('notAuthenticated', () => {
                     reject('Not Authenticated')
                 });
+                socket.on('levelDNE', () => {
+                    reject('Level does not exist');
+                })
                 setTimeout(() => reject('Timed out'), 5000);
             });
-        }
-
-
-
-        function displayLevel(data, name) {
-            window.removeEventListener('mousemove', levelPlayMouseMoveHandler);
-            window.removeEventListener('click', levelPlayClickHandler);
-
-            clearChildren('svg');
-
-            for (let [key, value] of Object.entries(data.lines)) {
-                createLine({
-                    p1: cartesianToViewBox(value.p1),
-                    p2: cartesianToViewBox(value.p2)
-                }, 'black', 1, s);
-            }
-            createLine({
-                p1: cartesianToViewBox(data.goal.p1),
-                p2: cartesianToViewBox(data.goal.p2)
-            }, 'green', 2, s);
-            createCircle(cartesianToViewBox(data.start), 'blue', 2, s);
-            window.addEventListener('mousemove', levelPlayMouseMoveHandler);
-            window.addEventListener('click', levelPlayClickHandler);
-
-            function levelPlayClickHandler(e){
-                getInstructions(name)
-                    .then(instructions => {
-                        let ball = createCircle(cartesianToViewBox(instructions[0]), 'red', 1, s);
-                        console.log(instructions);
-                        animate(instructions, ball, 0);
-                    })
-                    .catch(error => alert(error));
-            }
-            function levelPlayMouseMoveHandler(e){
-                if ($('targetLine')) $('targetLine').remove();
-                let point = $('svg').createSVGPoint();
-                point.x = e.clientX;
-                point.y = e.clientY;
-                point = point.matrixTransform($('svg').getScreenCTM().inverse());
-                let targetLine = createLine({
-                    p1: cartesianToViewBox(data.start),
-                    p2: point
-                }, 'lightblue', 1, s);
-                targetLine.attr({
-                    id: 'targetLine'
-                });
-            }
-        }
-
-        function displayLeaderboard(name){
-            clearChildren('levelLeaderboard');
-            let h1 = document.createElement('h1');
-            h1.textContent = 'Leaderboard';
-            $('levelLeaderboard').appendChild(h1);
-            getLeaderboard(name)
-            .then( array => {
-                array.forEach(item => {
-                    let elem = document.createElement('div');
-                    elem.textContent = `${item.username}: ${item.bounces}`;
-                    $('levelLeaderboard').appendChild(elem);
-                });
-            });
-        }
-        
-
-        function animate(instructions, ball, index){
-            if(index > instructions.length - 2){
-                ball.remove();
-                return;
-            }
-            const speed = 50; //50 units/second
-            let time = (distance(instructions[index], instructions[index + 1]) / speed) * 1000;
-            ball.animate({
-                cx: cartesianToViewBox(instructions[index + 1]).x,
-                cy: cartesianToViewBox(instructions[index + 1]).y
-            }, time);
-            setTimeout( () => animate(instructions, ball, index + 1), time );
         }
 
         async function getInstructions(name) {
@@ -316,98 +244,17 @@
             });
         }
 
-
-        let currLevelObj = null;
-        let lineCount = 0;
-        $('createLevelButton').onclick = e => {
-            clearSections();
-            $('createLevelSection').style.display = '';
-            clearChildren('svg2');
-            currLevelObj = {};
-            lineCount = 0;
-        }
-
-        let currTool = 'line';
-        let lastLinePoint = null;
-        let lastGoalPoint = null;
-        $('svg2').onclick = e => {
-            let point = $('svg2').createSVGPoint();
-            point.x = e.clientX;
-            point.y = e.clientY;
-            point = point.matrixTransform($('svg').getScreenCTM().inverse());
-            if(currTool == 'start'){
-                if(currLevelObj.start) {
-                    alert('You already placed a start point');
-                } else {
-                    createCircle(point, 'blue', 2, s2);
-                    currLevelObj.start = viewBoxToCartesian(point);
-                }
-            } else if(currTool == 'line'){
-                if(lastLinePoint == null){
-                    lastLinePoint = point;
-                    createCircle(point, 'black', 1, s2);
-                } else {
-                    let l = {
-                        p1:lastLinePoint,
-                        p2:point
-                    }
-                    if(currLevelObj.lines == null) currLevelObj.lines = {};
-                    currLevelObj.lines[`line${lineCount++}`] = {
-                        p1: viewBoxToCartesian(l.p1),
-                        p2: viewBoxToCartesian(l.p2)
-                    }
-                    createLine(l, 'black', 1, s2);
-                }
-            } else if(currTool == 'goal'){
-                if(currLevelObj.goal){
-                    alert('you already made a goal');
-                    return;
-                }
-                if(lastGoalPoint == null){
-                    lastGoalPoint = point;
-                    createCircle(point, 'green', 1, s2);
-                } else {
-                    let l = {
-                        p1:lastLinePoint,
-                        p2:point
-                    }
-                    currLevelObj.goal = {
-                        p1: viewBoxToCartesian(l.p1),
-                        p2: viewBoxToCartesian(l.p2)
-                    }
-                    createLine(l, 'green', 1, s2);
-                }
-            } else {
-                alert('No tool selected!')
-            }
-        }
-
-        $('submitLevel').onclick = e => {
-            new Promise( (resolve, reject) => {
-                socket.emit('newLevel', {
-                    lines: currLevelObj.lines,
-                    goal: currLevelObj.goal,
-                    start: currLevelObj.start,
-                    name: $('createLevelName').value,
-                    bounces: $('createLevelBounces').value
-                });
+        async function getMyLevels(){
+            return new Promise( (resolve, reject) => {
+                socket.emit('getMyLevels');
                 socket.on('notAuthenticated', () => {
-                    reject('Not Authenticated');
+                    reject('You must login to do that!');
                 });
-                socket.on('badData', () => {
-                    reject("There's something wrong with your level");
+                socket.on('myLevels', levels => {
+                    resolve(levels);
                 });
-                socket.on('nameTaken', () => {
-                    reject('Choose a different name for your level');
-                });
-                socket.on('levelCreated', () => {
-                    resolve();
-                });
+                setTimeout(() => reject('Timed out'), 5000);
             })
-            .then( () => {
-                //go to verify level
-            })
-            .catch( error => alert(error) )
         }
 
         async function getLeaderboard(name){
@@ -422,10 +269,275 @@
                 socket.on('leaderboard', leaderboard => {
                     resolve(leaderboard);
                 });
+                setTimeout(() => reject('Timed out'), 5000);
             });
         }
 
+        //section display functions
+
+        function displayMenu(){
+            getDisplayInfo()
+                .then(data => {
+
+                    clearSections();
+                    $('menuSection').style.display = ''
+                    clearChildren('levels');
+
+                    data.forEach(item => {
+                        let div = document.createElement('div');
+                        div.className = 'levelCard';
+
+                        let text = document.createElement('h2');
+                        text.textContent = item.name;
+                        div.appendChild(text);
+
+                        let playButton = document.createElement('button');
+                        playButton.textContent = 'play';
+                        div.appendChild(playButton);
+                        playButton.onclick = e => {
+                            displayLevel(item.name);
+                        }
+
+                        let leaderboardButton = document.createElement('button');
+                        leaderboardButton.textContent = 'leaderboard'
+                        div.appendChild(leaderboardButton);
+                        leaderboardButton.onclick = e => {
+                            displayLeaderboard(item.name);
+                        }
+
+                        $('levels').appendChild(div);
+                    });
+                })
+                .catch(error => alert(error));
+        }
+
+        function displayLevel(name) {
+            getLevelData(name)
+            .then( data => {
+
+                clearSections();
+                $('levelPlaySection').style.display = '';
+
+                $('svg').removeEventListener('mousemove', levelPlayMouseMoveHandler);
+                $('svg').removeEventListener('click', levelPlayClickHandler);
+
+                clearChildren('svg');
+
+                for (let [key, value] of Object.entries(data.lines)) {
+                    createLine({
+                        p1: cartesianToViewBox(value.p1),
+                        p2: cartesianToViewBox(value.p2)
+                    }, 'black', 1, s);
+                }
+                createLine({
+                    p1: cartesianToViewBox(data.goal.p1),
+                    p2: cartesianToViewBox(data.goal.p2)
+                }, 'green', 2, s);
+                createCircle(cartesianToViewBox(data.start), 'blue', 2, s);
+                $('svg').addEventListener('mousemove', levelPlayMouseMoveHandler);
+                $('svg').addEventListener('click', levelPlayClickHandler);
+
+                function levelPlayClickHandler(e){
+                    getInstructions(name)
+                        .then(instructions => {
+                            let ball = createCircle(cartesianToViewBox(instructions[0]), 'red', 1, s);
+                            animate(instructions, ball, 0);
+
+                            //display some stuff based on if you beat it
+
+                        })
+                        .catch(error => alert(error));
+                }
+                function levelPlayMouseMoveHandler(e){
+                    if ($('targetLine')) $('targetLine').remove();
+                    let point = $('svg').createSVGPoint();
+                    point.x = e.clientX;
+                    point.y = e.clientY;
+                    point = point.matrixTransform($('svg').getScreenCTM().inverse());
+                    let targetLine = createLine({
+                        p1: cartesianToViewBox(data.start),
+                        p2: point
+                    }, 'lightblue', 1, s);
+                    targetLine.attr({
+                        id: 'targetLine'
+                    });
+                }
+            })
+            .catch( error => alert(error) );
+            
+        }
+
+        function displayLeaderboard(name){
+            getLeaderboard(name)
+            .then( array => {
+
+                clearSections();
+                $('leaderboardSection').style.display = '';
+                clearChildren('levelLeaderboard');
+
+                array.forEach(item => {
+                    let elem = document.createElement('div');
+                    elem.textContent = `${item.username}: ${item.bounces}`;
+                    $('levelLeaderboard').appendChild(elem);
+                });
+            })
+            .catch( error => alert(error) );
+        }
+
+        function displayMyLevels(){
+            clearSections();
+            clearChildren('myLevels');
+            $('myLevelsSection').style.display = '';
+            getMyLevels()
+            .then( levels => {
+                for(let level of levels){
+                    let div = document.createElement('div');
+                    div.className = 'levelCard';
+
+                    let text = document.createElement('h2');
+                    text.textContent = level.name;
+                    div.appendChild(text);
+
+                    if(level.status == 'verified'){
+                        let leaderboardButton = document.createElement('button');
+                        leaderboardButton.textContent = 'leaderboard'
+                        div.appendChild(leaderboardButton);
+                        leaderboardButton.onclick = e => {
+                            displayLeaderboard(level.name);
+                        }
+                    } else {
+                        let verifyButton = document.createElement('button');
+                        verifyButton.textContent = 'verify';
+                        div.appendChild(verifyButton);
+                        verifyButton.onclick = e => {
+                            displayLevel(level.name);
+                        }
+                    }
+                    $('myLevels').appendChild(div);
+                }
+            })
+            .catch( error => alert(error));
+        }
+
+        //event listeners
+
+        socket.on('authenticated', displayMenu);
+
+        for(let elem of Array.from(document.getElementsByClassName('menuButton'))) {
+            elem.onclick = displayMenu;
+        }
+
+        let currLevelObj = null;
+        let lineCount = 0;
+        $('createLevelButton').onclick = e => {
+            clearSections();
+            $('createLevelSection').style.display = '';
+            clearChildren('svg2');
+            currLevelObj = {};
+            lineCount = 0;
+        }
+
+        let currTool = 'line';
+
+        $('selectLineTool').onclick = e => {
+            currTool = 'line';
+        }
+        $('selectGoalTool').onclick = e => {
+            currTool = 'goal';
+        }
+        $('selectStartTool').onclick = e => {
+            currTool = 'start';
+        }
+            
+        let lastLinePoint = null;
+        let lastGoalPoint = null;
+        $('svg2').onclick = e => {
+            let point = $('svg2').createSVGPoint();
+            point.x = e.clientX;
+            point.y = e.clientY;
+            point = point.matrixTransform($('svg2').getScreenCTM().inverse());
+            if(currTool == 'start'){
+                if(currLevelObj.start) {
+                    alert('You already placed a start point');
+                } else {
+                    createCircle(point, 'blue', 2, s2);
+                    currLevelObj.start = viewBoxToCartesian(point);
+                }
+            } else if(currTool == 'line'){
+                createCircle(point, 'black', 0.5, s2);
+                if(lastLinePoint == null){
+                    lastLinePoint = point;
+                } else {
+                    let l = {
+                        p1:lastLinePoint,
+                        p2:point
+                    }
+                    if(currLevelObj.lines == null) currLevelObj.lines = {};
+                    currLevelObj.lines[`line${lineCount++}`] = {
+                        p1: viewBoxToCartesian(l.p1),
+                        p2: viewBoxToCartesian(l.p2)
+                    }
+                    createLine(l, 'black', 1, s2);
+                    lastLinePoint = null;
+                }
+            } else if(currTool == 'goal'){
+                if(currLevelObj.goal){
+                    alert('you already made a goal');
+                    return;
+                }
+                createCircle(point, 'green', 1, s2);
+                if(lastGoalPoint == null){
+                    lastGoalPoint = point;
+                } else {
+                    let l = {
+                        p1:lastGoalPoint,
+                        p2:point
+                    }
+                    currLevelObj.goal = {
+                        p1: viewBoxToCartesian(l.p1),
+                        p2: viewBoxToCartesian(l.p2)
+                    }
+                    createLine(l, 'green', 2, s2);
+                    lastGoalPoint = null
+                }
+            } else {
+                alert('No tool selected!');
+            }
+        }
+
+        $('submitLevel').onclick = e => {
+            new Promise( (resolve, reject) => {
+                socket.emit('newLevel', {
+                    lines: currLevelObj.lines,
+                    goal: currLevelObj.goal,
+                    start: currLevelObj.start,
+                    name: $('createLevelName').value,
+                    bounces: +$('createLevelBounces').value
+                });
+                socket.on('notAuthenticated', () => {
+                    reject('Not Authenticated');
+                });
+                socket.on('badData', () => {
+                    reject("There's something wrong with your level");
+                });
+                socket.on('nameTaken', () => {
+                    reject('Choose a different name for your level');
+                });
+                socket.on('levelCreated', name => {
+                    resolve();
+                });
+            })
+            .then( () => {
+                displayMyLevels();
+            })
+            .catch( error => alert(error) );
+        }
+
+        $('myLevelsButton').onclick = displayMyLevels;
+
         
+
+        //utility functions
         function clearChildren(id){
             for(let child of Array.from($(id).children)){
                 child.remove();
@@ -473,7 +585,19 @@
             });
             return snapCircle;
         }
-
+        function animate(instructions, ball, index){
+            if(index > instructions.length - 2){
+                ball.remove();
+                return;
+            }
+            const speed = 50; //50 units/second
+            let time = (distance(instructions[index], instructions[index + 1]) / speed) * 1000;
+            ball.animate({
+                cx: cartesianToViewBox(instructions[index + 1]).x,
+                cy: cartesianToViewBox(instructions[index + 1]).y
+            }, time);
+            setTimeout( () => animate(instructions, ball, index + 1), time );
+        }
 
 
     </script>

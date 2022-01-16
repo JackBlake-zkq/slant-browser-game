@@ -13,7 +13,7 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
-        user: 'cutropegame@gmail.com',
+        user: 'ballshotgame@gmail.com',
         pass: process.env.EMAIL_PASS
     }
 });
@@ -77,7 +77,7 @@ io.on('connection', socket => {
             usersRef.set(data);
             const mailOptions = {
                 to: user.email,
-                subject: "Swing Rope Confirmation Code",
+                subject: "Ball Shot Confirmation Code",
                 text: `Your confirmation code is: ${confirmationCode}`,
                 }
             transporter.sendMail(mailOptions, function(error, info){
@@ -243,7 +243,7 @@ io.on('connection', socket => {
                     creator: authenticated.username,
                 }
                 levelsRef.set(data);
-                socket.emit('levelCreated');
+                socket.emit('levelCreated', info.name);
             });
     });
     socket.on('getDisplayInfo', () => {
@@ -278,12 +278,32 @@ io.on('connection', socket => {
                 return;
             } 
             if(data[name].status == 'unverified'){
-                if(data[name].creator != authenticated.email){
+                if(data[name].creator != authenticated.username){
                     socket.emit('levelNotFound');
                     return;
                 }
             }
             socket.emit('levelData', data[name]);
+        });
+    });
+    socket.on('getMyLevels', () => {
+        if(!authenticated){
+            socket.emit('notAuthenticated');
+            return;
+        } 
+        levelsRef.once('value', snap => {
+            let data = snap.val();
+            if(data == null) data = {};
+            let myLevels = [];
+            for(let [key, value] of Object.entries(data)){
+                if(value.creator == authenticated.username){
+                    myLevels.push({
+                        name: key,
+                        status: value.status,
+                    });
+                }
+            }
+            socket.emit('myLevels', myLevels);
         });
     });
     socket.on('playLevel', info => {
