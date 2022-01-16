@@ -329,10 +329,6 @@ io.on('connection', socket => {
                 socket.emit('levelDNE');
                 return;
             }
-            if(data[info.name].status == 'verified' && data[info.name].creator == authenticated.username){
-                socket.emit('ownLevel');
-                return;
-            }
             let bouncesLeft = data[info.name].bounces;
             const lines = data[info.name].lines;
             const goal = data[info.name].goal;
@@ -377,7 +373,7 @@ io.on('connection', socket => {
                                     users[_(authenticated.email)].levels[info.name] = data[info.name].bounces - bouncesLeft;
                                     socket.emit('newPB')
                                 } else {
-                                    socket.emit('notPB');
+                                    //not PB
                                 }
                             } else {
                                 users[_(authenticated.email)].levels[info.name] = data[info.name].bounces - bouncesLeft;
@@ -399,6 +395,7 @@ io.on('connection', socket => {
 
                 let magV = Math.sqrt( v.x * v.x + v.y * v.y );
                 let angleV = radiansToDegrees(Math.acos(v.x / magV));
+                if (v.y < 0) angleV = 360 - angleV;
 
                 currAngle = 2 * angleV - currAngle
                 while(currAngle < 0){
@@ -438,7 +435,7 @@ io.on('connection', socket => {
                     bounces: value.levels[levelName]
                 });
             }
-            quickSort(leaderboard);
+            quickSort(leaderboard, 0, leaderboard.length - 1);
             socket.emit('leaderboard', leaderboard);
         })
     });
@@ -459,6 +456,9 @@ function quickSort(items, left, right) {
 }
 
 function partition(items, left, right) {
+    console.log(items);
+    console.log(left);
+    console.log(right);
     var pivot   = items[Math.floor((right + left) / 2)].bounces, //middle element
         i       = left, //left pointer
         j       = right; //right pointer

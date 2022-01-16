@@ -87,7 +87,9 @@
     </section>
 
     <section id="levelPlaySection">
+        <h3 id="maxBounces"></h3>
         <svg id="svg" viewBox="0 0 100 100"></svg>
+        <h4 id="winStatus"></h4>
         <button class="menuButton">Back</button>
     </section>
 
@@ -222,11 +224,21 @@
                     name: name,
                     angle: angleV
                 });
+                let info = {
+                    isPB: false,
+                    clear: false
+                };
+                socket.on('newPB', () => {
+                    info.isPB = true;
+                });
                 socket.on('animateClear', instructions => {
-                    resolve(instructions);
+                    info.clear = true;
+                    info.instructions = instructions;
+                    resolve(info);
                 });
                 socket.on('animateFail', instructions => {
-                    resolve(instructions);
+                    info.instructions = instructions;
+                    resolve(info);
                 });
                 socket.on('notAuthenticated', () => {
                     reject('Not Authenticated')
@@ -323,6 +335,8 @@
 
                 clearChildren('svg');
 
+                $('maxBounces').textContent = `Maximum Bounces: ${data.bounces}`;
+
                 for (let [key, value] of Object.entries(data.lines)) {
                     createLine({
                         p1: cartesianToViewBox(value.p1),
@@ -338,13 +352,22 @@
                 $('svg').addEventListener('click', levelPlayClickHandler);
 
                 function levelPlayClickHandler(e){
+                    $('winStatus').textContent = '';
                     getInstructions(name)
-                        .then(instructions => {
-                            let ball = createCircle(cartesianToViewBox(instructions[0]), 'red', 1, s);
-                            animate(instructions, ball, 0);
+                        .then(info => {
+                            let ball = createCircle(cartesianToViewBox(info.instructions[0]), 'red', 1, s);
+                            animate(info.instructions, ball, 0);
 
+                            if(info.clear){
+                                if(info.isPB){
+                                    $('winStatus').textContent = `New Personal Best! ${info.instructions.length - 2} bounces`;
+                                } else {
+                                    $('winStatus').textContent = `Not a personal best... ${info.instructions.length - 2} bounces`;
+                                }
+                            } else {
+                                $('winStatus').textContent = 'Fail';
+                            }
                             //display some stuff based on if you beat it
-
                         })
                         .catch(error => alert(error));
                 }
