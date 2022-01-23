@@ -632,6 +632,8 @@
             
         let lastLinePoint = null;
         let lastGoalPoint = null;
+        let goalCircles = [];
+        let currGoal = null;
         let currStart = null;
         $('svg2').onclick = e => {
             let point = $('svg2').createSVGPoint();
@@ -662,7 +664,12 @@
                     lastLinePoint = null;
                 }
             } else if(currTool == 'goal'){
-                createCircle(point, 'green', 1, s2);
+                if(currGoal) {
+                    currGoal.remove();
+                    goalCircles.forEach(item => item.remove());
+                    goalCircles = [];
+                }
+                goalCircles.push(createCircle(point, 'green', 1, s2));
                 if(lastGoalPoint == null){
                     lastGoalPoint = point;
                 } else {
@@ -676,8 +683,8 @@
                         p1: viewBoxToCartesian(l.p1),
                         p2: viewBoxToCartesian(l.p2)
                     }
-                    createLine(l, 'green', 2, s2);
-                    lastGoalPoint = null
+                    currGoal = createLine(l, 'green', 2, s2);
+                    lastGoalPoint = null;
                 }
             } else {
                 alert('No tool selected!');
