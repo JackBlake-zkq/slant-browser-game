@@ -541,6 +541,12 @@
                             displayLevel(item.name);
                         }
                     }
+                    let deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'delete';
+                        div.appendChild(deleteButton);
+                        deleteButton.onclick = e => {
+                            socket.emit('deleteLevel', item.name);
+                        }
                     $('myLevels').appendChild(div);
                 });
             })

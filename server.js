@@ -300,6 +300,21 @@ io.on('connection', socket => {
                 });
             });
     });
+    socket.on('deleteLevel', name => {
+        if(!authenticated){
+            socket.emit('notAuthenticated');
+            return;
+        } 
+        levelsRef.orderByChild('creator').equalTo(authenticated.creator).once('value', snap => {
+            let data = snap.val();
+            if(data == null || data[name] == null){
+                socket.emit('levelNotFound');
+                return;
+            } 
+            data[name] = null;
+            levelsRef.set(data);
+        })
+    });
     socket.on('getDisplayInfo', info => {
         if(!authenticated){
             socket.emit('notAuthenticated');
