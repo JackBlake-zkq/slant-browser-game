@@ -81,7 +81,7 @@ io.on('connection', socket => {
             usersRef.set(data);
             const mailOptions = {
                 to: user.email,
-                subject: "Ball Shot Confirmation Code",
+                subject: "slant.pro Confirmation Code",
                 text: `Your confirmation code is: ${confirmationCode}`,
                 }
             transporter.sendMail(mailOptions, function(error, info){
