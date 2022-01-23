@@ -546,6 +546,7 @@
                         div.appendChild(deleteButton);
                         deleteButton.onclick = e => {
                             socket.emit('deleteLevel', item.name);
+                            displayMyLevels();
                         }
                     $('myLevels').appendChild(div);
                 });

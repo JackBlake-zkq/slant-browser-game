@@ -305,7 +305,7 @@ io.on('connection', socket => {
             socket.emit('notAuthenticated');
             return;
         } 
-        levelsRef.orderByChild('creator').equalTo(authenticated.creator).once('value', snap => {
+        levelsRef.orderByChild('creator').equalTo(authenticated.username).once('value', snap => {
             let data = snap.val();
             if(data == null || data[name] == null){
                 socket.emit('levelNotFound');
