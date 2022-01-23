@@ -178,8 +178,7 @@ io.on('connection', socket => {
     });
 
     socket.on('rememberMe', cookie => {
-        let code = cookie.slice(5);
-        usersRef.orderByChild('cookie').equalTo(code).once('value', snap => {
+        usersRef.orderByChild('cookie').equalTo(cookie).once('value', snap => {
             snap.forEach( child => {
                 authenticated = {
                     username: child.val().username,
@@ -188,7 +187,7 @@ io.on('connection', socket => {
                 socket.emit('authenticated');
                 return;
             });
-        })
+        });
     });
 
     socket.on('newLevel', info => {
@@ -584,8 +583,11 @@ function distance(p1, p2){
     );
 }
 
-function _(a){
-    return a.replaceAll('.', '>');
+function _(email){
+    if(typeof email == 'string'){
+        return email.replaceAll('.', '>');
+    }
+    return false;
 }
 
 

@@ -190,7 +190,7 @@
         const s2 = Snap('#svg2');
 
         clearSections();
-        socket.emit('rememberMe', document.cookie);
+        socket.emit('rememberMe', getCookie('code'));
 
         //authentication event listeners and emition
         
@@ -765,6 +765,16 @@
                 cy: cartesianToViewBox(instructions[index + 1]).y
             }, time);
             setTimeout( () => animate(instructions, ball, index + 1), time );
+        }
+        function getCookie(name) {
+            var nameEQ = name + "=";
+            var ca = document.cookie.split(';');
+            for(var i=0;i < ca.length;i++) {
+                var c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            }
+            return null;
         }
     </script>
 </body>
