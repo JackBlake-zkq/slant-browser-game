@@ -228,11 +228,14 @@ io.on('connection', socket => {
                 socket.emit('badData');
                 return;
             }
-            levelsRef
-                .orderByChild('creator').equalTo(authenticated.username)
-                .orderByChild('status').equalTo('unverified')
-                .once('value', snap => {
-                if(snap.getChildrenCount() >= 5){
+            levelsRef.orderByChild('creator').equalTo(authenticated.username).once('value', snap => {
+                let count = 0;
+                snap.forEach( child => {
+                    if(child.val().status == 'unverified'){
+                        count++;
+                    }
+                });
+                if(count >= 5){
                     socket.emit('tooManyUnverifiedLevels');
                     return;
                 }

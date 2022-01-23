@@ -610,18 +610,16 @@
             
         let lastLinePoint = null;
         let lastGoalPoint = null;
+        let currStart = null;
         $('svg2').onclick = e => {
             let point = $('svg2').createSVGPoint();
             point.x = e.clientX;
             point.y = e.clientY;
             point = point.matrixTransform($('svg2').getScreenCTM().inverse());
             if(currTool == 'start'){
-                if(currLevelObj.start) {
-                    alert('You already placed a start point');
-                } else {
-                    createCircle(point, 'blue', 2, s2);
-                    currLevelObj.start = viewBoxToCartesian(point);
-                }
+                if(currStart) currStart.remove();
+                currStart = createCircle(point, 'blue', 2, s2);
+                currLevelObj.start = viewBoxToCartesian(point);
             } else if(currTool == 'line'){
                 createCircle(point, 'black', 0.5, s2);
                 if(lastLinePoint == null){
