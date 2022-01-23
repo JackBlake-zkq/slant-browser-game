@@ -178,6 +178,7 @@ io.on('connection', socket => {
     });
 
     socket.on('rememberMe', cookie => {
+        if(typeof cookie != 'string' || !cookie) return;
         usersRef.orderByChild('cookie').equalTo(cookie).once('value', snap => {
             snap.forEach( child => {
                 authenticated = {
