@@ -585,7 +585,7 @@ function distance(p1, p2){
 }
 
 function _(email){
-    return email.replace(/./g, '>');
+    return email.replace(/\./g, '>');
 }
 
 
