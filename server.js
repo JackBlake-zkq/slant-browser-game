@@ -13,7 +13,7 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
-        user: 'cutropegame@gmail.com',
+        user: 'ballshotgame@gmail.com',
         pass: process.env.EMAIL_PASS
     }
 });
@@ -85,6 +85,7 @@ io.on('connection', socket => {
                 text: `Your confirmation code is: ${confirmationCode}`,
                 }
             transporter.sendMail(mailOptions, function(error, info){
+                console.log(info);
                 if (error) {
                     console.log(error);
                     data[_(user.email)] = null;
