@@ -381,6 +381,20 @@
                 setTimeout(() => reject('Timed out'), 5000);
             });
         }
+        async function deleteLevel(name){
+            return new Promise( (resolve, reject) => {
+                socket.emit('deleteLevel', name);
+                socket.on('levelDeleted', () => {
+                    resolve();
+                });
+                socket.on('levelNotFound', () => {
+                    reject('Level Not Found');
+                });
+                socket.on('notAuthenticated', () => {
+                    reject('You must be logged in to do that!');
+                });
+            });
+        }
 
         //section display functions
 
@@ -553,21 +567,6 @@
                 });
             })
             .catch( error => alert(error));
-        }
-
-        function deleteLevel(name){
-            return new Promise( (resolve, reject) => {
-                socket.emit('deleteLevel', name);
-                socket.on('levelDeleted', () => {
-                    resolve();
-                });
-                socket.on('levelNotFound', () => {
-                    reject('Level Not Found');
-                });
-                socket.on('notAuthenticated', () => {
-                    reject('You must be logged in to do that!');
-                });
-            });
         }
 
         //event listeners
