@@ -182,7 +182,7 @@ io.on('connection', socket => {
             snap.forEach( child => {
                 authenticated = {
                     username: child.val().username,
-                    email: child.key.replaceAll('>', '.')
+                    email: child.key.replace(/>/g, '.')
                 };
                 socket.emit('authenticated');
                 return;
@@ -584,10 +584,7 @@ function distance(p1, p2){
 }
 
 function _(email){
-    if(typeof email == 'string'){
-        return email.replaceAll('.', '>');
-    }
-    return false;
+    return email.replace(/./g, '>');
 }
 
 
