@@ -13,7 +13,7 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     service: 'Gmail',
     auth: {
-        user: 'ballshotgame@gmail.com',
+        user: 'cutropegame@gmail.com',
         pass: process.env.EMAIL_PASS
     }
 });
@@ -50,6 +50,10 @@ io.on('connection', socket => {
 
         if(!validateEmail(user.email)){
             socket.emit('invalidEmail');
+            return;
+        }
+        if(!user.username.match(/^[A-Za-z0-9]+$/)){ //check if alphanumeric
+            socket.emit('invalidUsername');
             return;
         }
         const hashedPassword = passwordHash.generate(user.password);
@@ -149,7 +153,42 @@ io.on('connection', socket => {
                 email: user.email
             };
             socket.emit('authenticated');
+            let cookie = '';
+            for(let i = 0; i < 5; i++){
+                cookie+=Math.random().toString(36).substring(2, 15);
+            }
+            data[_(user.email)].cookie = cookie;
+            usersRef.set(data);
+            socket.emit('saveCookie', cookie);
         });
+    });
+
+    socket.on('logout', () => {
+        if(!authenticated){
+            socket.emit('notAuthenticated');
+            return;
+        } 
+        usersRef.once('value', snap => {
+            let data = snap.val();
+            data[_(authenticated.email)].cookie = null;
+            usersRef.set(data);
+            authenticated=false;
+            socket.emit('loginPrompt');
+        });
+    });
+
+    socket.on('rememberMe', cookie => {
+        let code = cookie.slice(5);
+        usersRef.orderByChild('cookie').equalTo(code).once('value', snap => {
+            snap.forEach( child => {
+                authenticated = {
+                    username: child.val().username,
+                    email: child.key.replaceAll('>', '.')
+                };
+                socket.emit('authenticated');
+                return;
+            });
+        })
     });
 
     socket.on('newLevel', info => {
@@ -159,6 +198,10 @@ io.on('connection', socket => {
         }
         if(!(info && info.lines && info.goal && info.start && info.name)){
             socket.emit('badData');
+            return;
+        }
+        if(!info.name.match(/^[A-Za-z0-9]+$/)){ //check if alphanumeric
+            socket.emit('invalidName');
             return;
         }
         //verify integrity of each element
@@ -240,29 +283,50 @@ io.on('connection', socket => {
                     bounces: info.bounces,
                     start: info.start, //point
                     status: 'unverified',
-                    creator: authenticated.username,
+                    creator: authenticated.username
                 }
                 levelsRef.set(data);
                 socket.emit('levelCreated', info.name);
             });
     });
-    socket.on('getDisplayInfo', () => {
+    socket.on('getDisplayInfo', info => {
         if(!authenticated){
             socket.emit('notAuthenticated');
             return;
         } 
-        levelsRef.once('value', snap => {
-            let data = snap.val();
-            if(data == null) data = {};
+        if(!info){
+            socket.emit('badData');
+            return;
+        }
+        if(!(info.sortBy== 'timestamp' || info.sortBy == 'downloads')){
+            socket.emit('badData');
+            return;
+        }
+        if(!(info.searchType == 'name' || info.searchType == 'creator')){
+            socket.emit('badData');
+            return;
+        }
+        if(!(info.searchInput === '' || info.searchInput.match(/^[A-Za-z0-9]+$/))){
+            socket.emit('badData');
+            return;
+        }
+        levelsRef.orderByChild(info.sortBy).limitToLast(50).once('value', snap => {
             let verifiedLevels = [];
-            for(let [key, value] of Object.entries(data)){
+            snap.forEach( child => {
+                let key = child.key;
+                let value = child.val();
                 if(value.status == 'verified'){
-                    verifiedLevels.push({
-                        name: key,
-                        creator:value.creator
-                    });
+                    let toSearch = key;
+                    if(info.searchType == 'creator') toSearch = value.creator;
+                    if(toSearch.includes(info.searchInput)){
+                        verifiedLevels.push({
+                            name: key,
+                            creator:value.creator,
+                        });
+                    }
                 }
-            }
+            });
+            verifiedLevels = verifiedLevels.reverse();
             socket.emit('displayInfo', verifiedLevels);
         });
     });
@@ -283,7 +347,25 @@ io.on('connection', socket => {
                     return;
                 }
             }
-            socket.emit('levelData', data[name]);
+            socket.emit('levelData', {
+                start: data[name].start,
+                goal: data[name].goal,
+                lines: data[name].lines,
+                bounces: data[name].bounces
+            });
+            if(!data[name].downloaders) {
+                data[name].downloaders = [authenticated.username];
+                data[name].downloads = 1;
+                levelsRef.set(data);
+                return;
+            }
+            let downloaders = Array.from(data[name].downloaders);
+            if(!downloaders.includes(authenticated.username)) {
+                downloaders.push(authenticated.username);
+                data[name].downloaders = downloaders;
+                data[name].downloads++;
+                levelsRef.set(data);
+            }
         });
     });
     socket.on('getMyLevels', () => {
@@ -337,7 +419,6 @@ io.on('connection', socket => {
             let instructions = [currPoint];
             let prevBounceLine = null;
             while(bouncesLeft >= 0){
-                console.log(`Angle: ${currAngle}, Point: (${currPoint.x}, ${currPoint.y})`);
                 let nextPoint = {x:1000, y:1000};
                 let bounceLine = null;
                 for(let [key, value] of Object.entries(lines)){
@@ -362,25 +443,26 @@ io.on('connection', socket => {
                     instructions.push(nextPoint);
                     if(data[info.name].status == 'unverified' &&  data[info.name].creator == authenticated.username){
                         data[info.name].status = 'verified';
+                        data[info.name].timestamp = Date.now();
                         levelsRef.set(data);
                         socket.emit('verified');
-                    } else {
-                        usersRef.once('value', snap => {
-                            let users = snap.val();
-                            if(users[_(authenticated.email)].levels == null) users[_(authenticated.email)].levels = {}
-                            if(users[_(authenticated.email)].levels[info.name]){
-                                if(data[info.name].bounces - bouncesLeft < users[_(authenticated.email)].levels[info.name]){
-                                    users[_(authenticated.email)].levels[info.name] = data[info.name].bounces - bouncesLeft;
-                                    socket.emit('newPB')
-                                } else {
-                                    //not PB
-                                }
-                            } else {
+                    } 
+                    usersRef.once('value', snap => {
+                        let users = snap.val();
+                        if(users[_(authenticated.email)].levels == null) users[_(authenticated.email)].levels = {}
+                        if(typeof users[_(authenticated.email)].levels[info.name] == 'number'){
+                            if(data[info.name].bounces - bouncesLeft < users[_(authenticated.email)].levels[info.name]){
                                 users[_(authenticated.email)].levels[info.name] = data[info.name].bounces - bouncesLeft;
+                                socket.emit('pb');
+                            } else {
+                                socket.emit('npb');
                             }
-                            usersRef.set(users);
-                        });
-                    }
+                        } else {
+                            users[_(authenticated.email)].levels[info.name] = data[info.name].bounces - bouncesLeft;
+                            socket.emit('pb');
+                        }
+                        usersRef.set(users);
+                    });
                     socket.emit('animateClear', instructions);
                     return;
                 }
@@ -426,63 +508,19 @@ io.on('connection', socket => {
             }
         })
         let leaderboard = [];
-        usersRef.once('value', snap => {
-            let data = snap.val();
-            for(let [key, value] of Object.entries(data)){
-                if(value.levels == null || value.levels[levelName] == null) continue;
+        usersRef.orderByChild(`levels/${levelName}`).startAt(0).once('value', snap => {
+            snap.forEach( child => {
+                let value = child.val();
                 leaderboard.push({
                     username: value.username,
                     bounces: value.levels[levelName]
                 });
-            }
-            quickSort(leaderboard, 0, leaderboard.length - 1);
+            });
             socket.emit('leaderboard', leaderboard);
         })
     });
 });
 
-function quickSort(items, left, right) {
-    var index;
-    if (items.length > 1) {
-        index = partition(items, left, right); //index returned from partition
-        if (left < index - 1) { //more elements on the left side of the pivot
-            quickSort(items, left, index - 1);
-        }
-        if (index < right) { //more elements on the right side of the pivot
-            quickSort(items, index, right);
-        }
-    }
-    return items;
-}
-
-function partition(items, left, right) {
-    console.log(items);
-    console.log(left);
-    console.log(right);
-    var pivot   = items[Math.floor((right + left) / 2)].bounces, //middle element
-        i       = left, //left pointer
-        j       = right; //right pointer
-    while (i <= j) {
-        while (items[i].bounces < pivot) {
-            i++;
-        }
-        while (items[j].bounces > pivot) {
-            j--;
-        }
-        if (i <= j) {
-            swap(items, i, j); //swap two elements
-            i++;
-            j--;
-        }
-    }
-    return i;
-}
-
-function swap(items, leftIndex, rightIndex){
-    var temp = items[leftIndex];
-    items[leftIndex] = items[rightIndex];
-    items[rightIndex] = temp;
-}
 
 function validateEmail(email) { 
     return email.match(

@@ -5,26 +5,89 @@
     <title>Ball Shot</title>
     <style>
         :root{
-
+            --col-bg: white;
+            --col-content: #ffc4f3;
+            --col-accent:#ffd77a;
+            --col-text: black;
+            background-image: url('https://assets-gnp-ssl.gonoodle.com/topic_content_tags/48/header_images/GN_CAT_MUSIC_PROD_Header-Large.large_2x_1627520702.jpg');
+            background-repeat: no-repeat;
+            background-size: cover;
         }
         html{
-
+            color: var(--col-text);
+            font-family:Verdana, Geneva, Tahoma, sans-serif;
+            font-size: 1.2rem;
         }
         body{
-            
+            width:100%;
+            min-height: 100vh;
+            text-align: center !important;
+        }
+        #registerSection, #loginSection, #codeSection{
+            margin: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
         }
         svg {
-            width:50%;
-            height:50%;
+            width:40%;
+            height:40%;
             margin-left:25%;
-            background: lightgray;
+            background: var(--col-bg);
         }
         .levelCard{
-            border: 5px solid black;
-            margin: 20px;
-            padding: 20px;
+            border: 0.4rem solid var(--col-accent);
+            border-radius: 0.5rem;
+            margin: 1.2rem;
+            padding: 1.2rem;
+            background: var(--col-bg);
         }
+        button, input[type="submit"], #logout, select{
+            background: var(--col-content);
+            color: var(--col-text);
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.25rem;
+            font-size: 1rem;
+            margin: 0.5rem;
+        }
+        button:hover, input[type="submit"]:hover, #logout:hover, select:hover{
+            background: var(--col-accent);
+        }
+        input[type="text"], input[type="password"]{
+            background: rgba(0,0,0, 0.02);
+            padding:0.25rem;
+            border:none;
+            border-radius: 0.5rem;
+            border-bottom: 0.1rem solid var(--col-accent);
+            color:var(--col-text);
+            display: inline-block;
+        }
+        input[type="text"]:focus, input[type="password"]:focus{
+            outline:none;
+        }
+        input[type="text"]::placeholder, input[type="password"]::placeholder{
+            color:var(--col-text);
+        }
+        .levelCard button {
+            
+        }
+        #levels, #myLevels{
+            display:flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .menuButton{
+            margin: 20px;
+        }
+        .selected{
+            filter: brightness(1.5);
+        }
+
     </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1452068236422867"
+    crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -32,12 +95,9 @@
     <section id="registerSection">
         <form id="registerForm">
             <h1>Register</h1>
-            <label for="email">Email</label>
-            <input type=text id="registerEmail" name="email">
-            <label for="username">Username</label>
-            <input type=text id="registerUsername" name="username">
-            <label for="password">Password</label>
-            <input type=text id="registerPassword" namne="password">
+            <input type=text id="registerEmail" name="email" placeholder="Email">
+            <input type=text id="registerUsername" name="username" placeholder="Username">
+            <input type="password" id="registerPassword" namne="password" placeholder="Password">
             <input type="submit">
         </form>
     </section>
@@ -45,10 +105,8 @@
     <section id="loginSection">
         <h1>Login</h1>
         <form id="loginForm">
-            <label for="email">Email</label>
-            <input type=text id="loginEmail" name="email">
-            <label for="password">Password</label>
-            <input type=text id="loginPassword" name=password>
+            <input type=text id="loginEmail" name="email" placeholder="Email">
+            <input type="password" id="loginPassword" name=password placeholder="Password">
             <input type="submit">
         </form>
         <p>Don't have an account?</p>
@@ -64,11 +122,26 @@
     </section>
 
     <section id="menuSection">
+        <button id="logout">Logout</button>
+        <label for="searchType">Search Type</label>
+        <select name="searchType" id="searchType">
+            <option value="name">Level Name</option>
+            <option value="creator">Creator</option>
+        </select>
+        <label for="searchInput">search</label>
+        <input type="text" name="searchInput" id="searchInput">
+        <label for="sortBy">Sort By</label>
+        <select name="sortBy" id="sortBy">
+            <option value="downloads">Most Popular</option>
+            <option value="timestamp">Most Recent</option>
+        </select>
+        <button id="searchSubmit">Apply Search/Sort</button>
+        <button id="createLevelButton">Create Level</button>
+        <button id="myLevelsButton">My Levels</button>
         <div id="levels">
 
         </div>
-        <button id="createLevelButton">Create Level</button>
-        <button id="myLevelsButton">My Levels</button>
+        <p id="maximumDisplayMsg">A maximum of 50 levels can be displayed. If you like to see different levels, use the search bar at the top of the page</p>
     </section>
 
     <section id="createLevelSection">
@@ -94,7 +167,7 @@
     </section>
 
     <section id="leaderboardSection">
-        <h1>Leaderboard</h1>
+        <h1 id="leaderboardHead"></h1>
         <div id="levelLeaderboard"></div>
         <button class="menuButton">Back</button>
     </section>
@@ -117,9 +190,10 @@
         const s2 = Snap('#svg2');
 
         clearSections();
-
+        socket.emit('rememberMe', document.cookie);
 
         //authentication event listeners and emition
+        
         let currEmail = '';
 
         $('registerForm').onsubmit = e => {
@@ -152,6 +226,10 @@
             clearSections();
             $('registerSection').style.display = '';
         }
+        $('logout').onclick = e => {
+            document.cookie = 'code=;';
+            socket.emit('logout');
+        }
         socket.on('codePrompt', () => {
             clearSections();
             $('codeSection').style.display = '';
@@ -161,12 +239,19 @@
             $('loginSection').style.display = '';
         });
 
+        socket.on('saveCookie', cookie => {
+            document.cookie = `code=${cookie}; expires=Tue, 19 Jan 2038 04:14:07 GMT`;
+        });
+
         //Problems during authentication
         socket.on('failedEmail', () => {
             alert('Failed Confirmation Email');
         });
         socket.on('emailTaken', () => {
             alert('Email Taken');
+        });
+        socket.on('usernameTaken', () => {
+            alert('Username Taken');
         });
         socket.on('wrongCode', () => {
             alert('Wrong Code');
@@ -177,19 +262,29 @@
         socket.on('wrongPassword', () => {
             alert('Wrong Password');
         });
+        socket.on('invalidUsername', () => {
+            alert('Username must be all letters and numbers');
+        })
 
 
         //data getters
 
-        async function getDisplayInfo() {
+        async function getDisplayInfo(searchType, searchInput, sortBy) {
             return new Promise((resolve, reject) => {
-                socket.emit('getDisplayInfo');
+                socket.emit('getDisplayInfo', {
+                    searchType,
+                    searchInput,
+                    sortBy
+                });
                 socket.on('displayInfo', data => {
                     resolve(data);
                 });
                 socket.on('notAuthenticated', () => {
                     reject('Not Authenticated')
                 });
+                socket.on('badData', () => {
+                    reject('Bad Data');
+                })
                 setTimeout(() => reject('Timed out'), 5000);
             });
         }
@@ -225,16 +320,21 @@
                     angle: angleV
                 });
                 let info = {
-                    isPB: false,
+                    pb: false,
                     clear: false
                 };
-                socket.on('newPB', () => {
-                    info.isPB = true;
+                let count = 0;
+                socket.on('pb', () => {
+                    info.pb = true;
+                    if(++count == 2) resolve(info);
                 });
+                socket.on('npb', () => {
+                    if(++count == 2) resolve(info);
+                })
                 socket.on('animateClear', instructions => {
                     info.clear = true;
                     info.instructions = instructions;
-                    resolve(info);
+                    if(++count == 2) resolve(info);
                 });
                 socket.on('animateFail', instructions => {
                     info.instructions = instructions;
@@ -248,9 +348,6 @@
                 });
                 socket.on('levelDNE', () => {
                     reject('Level does not exist')
-                });
-                socket.on('ownLevel', () => {
-                    reject('You cannot play your own level after verifying!')
                 });
                 setTimeout(() => reject('Timed out'), 5000);
             });
@@ -287,21 +384,26 @@
 
         //section display functions
 
-        function displayMenu(){
-            getDisplayInfo()
+        function displayMenu(searchType, searchInput, sortBy){
+            getDisplayInfo(searchType, searchInput, sortBy)
                 .then(data => {
 
                     clearSections();
                     $('menuSection').style.display = ''
                     clearChildren('levels');
-
+                    if(data.length == 50) $('maximumDisplayMsg').style.display = '';
+                    else $('maximumDisplayMsg').style.display = 'none';
                     data.forEach(item => {
                         let div = document.createElement('div');
                         div.className = 'levelCard';
 
-                        let text = document.createElement('h2');
-                        text.textContent = item.name;
-                        div.appendChild(text);
+                        let h2 = document.createElement('h2');
+                        h2.textContent = item.name;
+                        div.appendChild(h2);
+
+                        let p = document.createElement('p');
+                        p.textContent = `Creator: ${item.creator}`
+                        div.appendChild(p);
 
                         let playButton = document.createElement('button');
                         playButton.textContent = 'play';
@@ -330,8 +432,7 @@
                 clearSections();
                 $('levelPlaySection').style.display = '';
 
-                $('svg').removeEventListener('mousemove', levelPlayMouseMoveHandler);
-                $('svg').removeEventListener('click', levelPlayClickHandler);
+                $('winStatus').textContent = '  ';
 
                 clearChildren('svg');
 
@@ -348,30 +449,7 @@
                     p2: cartesianToViewBox(data.goal.p2)
                 }, 'green', 2, s);
                 createCircle(cartesianToViewBox(data.start), 'blue', 2, s);
-                $('svg').addEventListener('mousemove', levelPlayMouseMoveHandler);
-                $('svg').addEventListener('click', levelPlayClickHandler);
-
-                function levelPlayClickHandler(e){
-                    $('winStatus').textContent = '';
-                    getInstructions(name)
-                        .then(info => {
-                            let ball = createCircle(cartesianToViewBox(info.instructions[0]), 'red', 1, s);
-                            animate(info.instructions, ball, 0);
-
-                            if(info.clear){
-                                if(info.isPB){
-                                    $('winStatus').textContent = `New Personal Best! ${info.instructions.length - 2} bounces`;
-                                } else {
-                                    $('winStatus').textContent = `Not a personal best... ${info.instructions.length - 2} bounces`;
-                                }
-                            } else {
-                                $('winStatus').textContent = 'Fail';
-                            }
-                            //display some stuff based on if you beat it
-                        })
-                        .catch(error => alert(error));
-                }
-                function levelPlayMouseMoveHandler(e){
+                $('svg').onmousemove = e => {
                     if ($('targetLine')) $('targetLine').remove();
                     let point = $('svg').createSVGPoint();
                     point.x = e.clientX;
@@ -385,6 +463,24 @@
                         id: 'targetLine'
                     });
                 }
+                $('svg').onclick = e => {
+                    $('winStatus').textContent = '';
+                    getInstructions(name)
+                        .then(info => {
+                            let ball = createCircle(cartesianToViewBox(info.instructions[0]), 'red', 1, s);
+                            animate(info.instructions, ball, 0);
+                            if(info.clear){
+                                if(info.pb){
+                                    $('winStatus').textContent = `New Personal Best! ${info.instructions.length - 2} bounces`;
+                                } else {
+                                    $('winStatus').textContent = `Not a personal best... ${info.instructions.length - 2} bounces`;
+                                }
+                            } else {
+                                $('winStatus').textContent = 'Fail';
+                            }
+                        })
+                        .catch(error => alert(error));
+                }
             })
             .catch( error => alert(error) );
             
@@ -396,6 +492,9 @@
 
                 clearSections();
                 $('leaderboardSection').style.display = '';
+
+                $('leaderboardHead').textContent = `Leaderboard: ${name}`;
+
                 clearChildren('levelLeaderboard');
 
                 array.forEach(item => {
@@ -413,41 +512,49 @@
             $('myLevelsSection').style.display = '';
             getMyLevels()
             .then( levels => {
-                for(let level of levels){
+                levels.forEach( item => {
                     let div = document.createElement('div');
                     div.className = 'levelCard';
 
-                    let text = document.createElement('h2');
-                    text.textContent = level.name;
-                    div.appendChild(text);
+                    let h2 = document.createElement('h2');
+                        h2.textContent = item.name;
+                        div.appendChild(h2);
 
-                    if(level.status == 'verified'){
+                    if(item.status == 'verified'){
                         let leaderboardButton = document.createElement('button');
                         leaderboardButton.textContent = 'leaderboard'
                         div.appendChild(leaderboardButton);
                         leaderboardButton.onclick = e => {
-                            displayLeaderboard(level.name);
+                            displayLeaderboard(item.name);
+                        }
+                        let playButton = document.createElement('button');
+                        playButton.textContent = 'play';
+                        div.appendChild(playButton);
+                        playButton.onclick = e => {
+                            displayLevel(item.name);
                         }
                     } else {
                         let verifyButton = document.createElement('button');
                         verifyButton.textContent = 'verify';
                         div.appendChild(verifyButton);
                         verifyButton.onclick = e => {
-                            displayLevel(level.name);
+                            displayLevel(item.name);
                         }
                     }
                     $('myLevels').appendChild(div);
-                }
+                });
             })
             .catch( error => alert(error));
         }
 
         //event listeners
 
-        socket.on('authenticated', displayMenu);
+        socket.on('authenticated', () => {
+            displayMenu($('searchType').value, $('searchInput').value, $('sortBy').value);
+        });
 
         for(let elem of Array.from(document.getElementsByClassName('menuButton'))) {
-            elem.onclick = displayMenu;
+            elem.onclick = e => displayMenu($('searchType').value, $('searchInput').value, $('sortBy').value);
         }
 
         let currLevelObj = null;
@@ -456,20 +563,49 @@
             clearSections();
             $('createLevelSection').style.display = '';
             clearChildren('svg2');
+            //default lines
+            createLine({
+                    p1:{x:0, y:0},
+                    p2:{x:0, y:100}
+                }, 'black', 1, s2);
+                createLine({
+                    p1:{x:0, y:0},
+                    p2:{x:100, y:0}
+                }, 'black', 1, s2);
+                createLine({
+                    p1:{x:100, y:100},
+                    p2:{x:0, y:100}
+                }, 'black', 1, s2);
+                createLine({
+                    p1:{x:100, y:100},
+                    p2:{x:100, y:0}
+                }, 'black', 1, s2);
             currLevelObj = {};
             lineCount = 0;
         }
 
         let currTool = 'line';
+        $('selectLineTool').className = 'selected';
+        $('selectGoalTool').className = '';
+        $('selectStartTool').className = '';
 
         $('selectLineTool').onclick = e => {
             currTool = 'line';
+            $('selectLineTool').className = 'selected';
+            $('selectGoalTool').className = '';
+            $('selectStartTool').className = '';
         }
         $('selectGoalTool').onclick = e => {
             currTool = 'goal';
+            $('selectGoalTool').className = 'selected';
+            $('selectLineTool').className = '';
+            $('selectStartTool').className = '';
         }
         $('selectStartTool').onclick = e => {
             currTool = 'start';
+            $('selectStartTool').className = 'selected';
+            $('selectGoalTool').className = '';
+            $('selectLineTool').className = '';
         }
             
         let lastLinePoint = null;
@@ -495,6 +631,8 @@
                         p1:lastLinePoint,
                         p2:point
                     }
+                    l.p1 = l.p1 > 50 ? l.p1 - l.p1 % 50 : l.p1;
+                    l.p2 = l.p2 > 50 ? l.p2 - l.p2 % 50 : l.p2;
                     if(currLevelObj.lines == null) currLevelObj.lines = {};
                     currLevelObj.lines[`line${lineCount++}`] = {
                         p1: viewBoxToCartesian(l.p1),
@@ -516,6 +654,8 @@
                         p1:lastGoalPoint,
                         p2:point
                     }
+                    l.p1 = l.p1 > 50 ? l.p1 - l.p1 % 50 : l.p1;
+                    l.p2 = l.p2 > 50 ? l.p2 - l.p2 % 50 : l.p2;
                     currLevelObj.goal = {
                         p1: viewBoxToCartesian(l.p1),
                         p2: viewBoxToCartesian(l.p2)
@@ -543,6 +683,9 @@
                 socket.on('badData', () => {
                     reject("There's something wrong with your level");
                 });
+                socket.on('invalidName', () => {
+                    reject('Name is invalid, please create a name with just letters and numbers');
+                })
                 socket.on('nameTaken', () => {
                     reject('Choose a different name for your level');
                 });
@@ -558,7 +701,9 @@
 
         $('myLevelsButton').onclick = displayMyLevels;
 
-        
+        $('searchSubmit').onclick = e => {
+            displayMenu($('searchType').value, $('searchInput').value, $('sortBy').value);
+        }
 
         //utility functions
         function clearChildren(id){
@@ -621,8 +766,6 @@
             }, time);
             setTimeout( () => animate(instructions, ball, index + 1), time );
         }
-
-
     </script>
 </body>
 
