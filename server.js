@@ -227,66 +227,73 @@ io.on('connection', socket => {
                 socket.emit('badData');
                 return;
             }
-
-
-            info.lines['defaultLine1'] = {
-                p1: {
-                    x:-50,
-                    y:-50
-                },
-                p2: {
-                    x:-50,
-                    y:50
-                }
-            }
-            info.lines['defaultLine2'] = {
-                p1: {
-                    x:-50,
-                    y:-50
-                },
-                p2: {
-                    x:50,
-                    y:-50
-                }
-            }
-            info.lines['defaultLine3'] = {
-                p1: {
-                    x:-50,
-                    y:50
-                },
-                p2: {
-                    x:50,
-                    y:50
-                }
-            }
-            info.lines['defaultLine4'] = {
-                p1: {
-                    x:50,
-                    y:-50
-                },
-                p2: {
-                    x:50,
-                    y:50
-                }
-            }
-
-            levelsRef.once('value', snap => {
-                let data = snap.val();
-                if(data == null) data = {};
-                if(data[info.name] != null){
-                    socket.emit('nameTaken')
+            levelsRef
+                .orderByChild('creator').equalTo(authenticated.username)
+                .orderByChild('status').equalTo('unverified')
+                .once('value', snap => {
+                if(snap.getChildrenCount() >= 5){
+                    socket.emit('tooManyUnverifiedLevels');
                     return;
                 }
-                data[info.name] = {
-                    lines: info.lines,
-                    goal: info.goal, //line
-                    bounces: info.bounces,
-                    start: info.start, //point
-                    status: 'unverified',
-                    creator: authenticated.username
+                info.lines['defaultLine1'] = {
+                    p1: {
+                        x:-50,
+                        y:-50
+                    },
+                    p2: {
+                        x:-50,
+                        y:50
+                    }
                 }
-                levelsRef.set(data);
-                socket.emit('levelCreated', info.name);
+                info.lines['defaultLine2'] = {
+                    p1: {
+                        x:-50,
+                        y:-50
+                    },
+                    p2: {
+                        x:50,
+                        y:-50
+                    }
+                }
+                info.lines['defaultLine3'] = {
+                    p1: {
+                        x:-50,
+                        y:50
+                    },
+                    p2: {
+                        x:50,
+                        y:50
+                    }
+                }
+                info.lines['defaultLine4'] = {
+                    p1: {
+                        x:50,
+                        y:-50
+                    },
+                    p2: {
+                        x:50,
+                        y:50
+                    }
+                }
+    
+                levelsRef.once('value', snap => {
+                    let data = snap.val();
+                    if(data == null) data = {};
+                    if(data[info.name] != null){
+                        socket.emit('nameTaken')
+                        return;
+                    }
+                    data[info.name] = {
+                        lines: info.lines,
+                        goal: info.goal, //line
+                        bounces: info.bounces,
+                        start: info.start, //point
+                        status: 'unverified',
+                        creator: authenticated.username
+                    }
+                    levelsRef.set(data);
+                    socket.emit('levelCreated', info.name);
+                });
             });
     });
     socket.on('getDisplayInfo', info => {

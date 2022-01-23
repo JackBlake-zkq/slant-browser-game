@@ -692,6 +692,9 @@
                 socket.on('levelCreated', name => {
                     resolve();
                 });
+                socket.on('tooManyUnverifiedLevels', () => {
+                    reject('You can only have 5 unverified levels at a time');
+                });
             })
             .then( () => {
                 displayMyLevels();
