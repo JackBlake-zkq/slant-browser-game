@@ -545,13 +545,29 @@
                         deleteButton.textContent = 'delete';
                         div.appendChild(deleteButton);
                         deleteButton.onclick = e => {
-                            socket.emit('deleteLevel', item.name);
-                            displayMyLevels();
+                            deleteLevel(item.name)
+                            .then(displayMyLevels)
+                            .catch(error => alert(error));
                         }
                     $('myLevels').appendChild(div);
                 });
             })
             .catch( error => alert(error));
+        }
+
+        function deleteLevel(name){
+            return new Promise( (resolve, reject) => {
+                socket.emit('deleteLevel', name);
+                socket.on('levelDeleted', () => {
+                    resolve();
+                });
+                socket.on('levelNotFound', () => {
+                    reject('Level Not Found');
+                });
+                socket.on('notAuthenticated', () => {
+                    reject('You must be logged in to do that!');
+                });
+            });
         }
 
         //event listeners

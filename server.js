@@ -313,6 +313,7 @@ io.on('connection', socket => {
             } 
             data[name] = null;
             levelsRef.set(data);
+            socket.emit('levelDeleted');
         })
     });
     socket.on('getDisplayInfo', info => {
