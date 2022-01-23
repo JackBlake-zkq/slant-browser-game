@@ -662,10 +662,6 @@
                     lastLinePoint = null;
                 }
             } else if(currTool == 'goal'){
-                if(currLevelObj.goal){
-                    alert('you already made a goal');
-                    return;
-                }
                 createCircle(point, 'green', 1, s2);
                 if(lastGoalPoint == null){
                     lastGoalPoint = point;
