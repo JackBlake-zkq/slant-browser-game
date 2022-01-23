@@ -313,6 +313,13 @@ io.on('connection', socket => {
             } 
             data[name] = null;
             levelsRef.set(data);
+            usersRef.once('value', snap => {
+                let users = snap.val();
+                for(let key of Object.keys(users)){
+                    if(users[key].levels) users[key].levels[name] = null;
+                }
+                usersRef.set(data);
+            })
             socket.emit('levelDeleted');
         })
     });
