@@ -318,7 +318,7 @@ io.on('connection', socket => {
                 for(let key of Object.keys(users)){
                     if(users[key].levels) users[key].levels[name] = null;
                 }
-                usersRef.set(data);
+                usersRef.set(users);
             })
             socket.emit('levelDeleted');
         })
