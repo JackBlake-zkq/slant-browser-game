@@ -13,29 +13,15 @@ const express = require('express'),
 const nodemailer = require('nodemailer');
 const admin = require("firebase-admin");
 
-let mailConfig;
-if(prod) {
-    mailConfig = {
-        host: 'smtp.zoho.com',
-        port: 465,
-        secure: true,
-        auth: {
-            user: process.env.EMAIL,
-            pass: process.env.EMAIL_PASS
-        }
-    };
-} else {
-    mailConfig = {
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false, 
-        auth: {
-            user: process.env.ETHEREAL_EMAIL, 
-            pass: process.env.ETHEREAL_EMAIL_PASS
-        }
-    };
-}
-const transporter = nodemailer.createTransport(mailConfig);
+const transporter = nodemailer.createTransport({
+    host: 'smtp.zoho.com',
+    port: 465,
+    secure: true,
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.EMAIL_PASS
+    }
+});
     
 admin.initializeApp({
     credential: admin.credential.cert(JSON.parse(process.env.DB_CRED)),
@@ -96,10 +82,11 @@ io.on('connection', socket => {
             }
             usersRef.set(data);
             const mailOptions = {
+                from: `slant.pro <${process.env.EMAIL}>`,
                 to: user.email,
                 subject: "slant.pro Confirmation Code",
                 text: `Your confirmation code is: ${confirmationCode}`,
-                }
+            }
             transporter.sendMail(mailOptions, function(error, info){
                 console.log(info);
                 if (error) {
