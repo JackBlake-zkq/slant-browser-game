@@ -1,13 +1,20 @@
 {
-    "name": "swinggame",
-    "version": "0.0.1",
-    "description": "cool game",
+    "name": "slant-browser-game",
+    "version": "1.0",
+    "description": "",
+    "scripts": {
+        "serve": "nodemon index.js",
+        "start": "node index.js"
+    },
     "dependencies": {
-        "dotenv": "^10.0.0",
         "express": "^4.17.2",
         "firebase-admin": "^10.0.1",
         "nodemailer": "^6.7.2",
         "password-hash": "^1.2.2",
         "socket.io": "^4.1.2"
+    },
+    "devDependencies": {
+        "dotenv": "^16.0.1",
+        "nodemon": "^2.0.19"
     }
 }

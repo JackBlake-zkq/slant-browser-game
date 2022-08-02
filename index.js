@@ -1,4 +1,6 @@
-require('dotenv').config()
+const prod = process.env['NODE_ENV'] === 'production';
+
+if(!prod) require('dotenv').config()
 
 const express = require('express'),
     app=express(),
@@ -9,17 +11,31 @@ const express = require('express'),
     passwordHash = require('password-hash');
 
 const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-    service: 'Gmail',
-    auth: {
-        user: 'ballshotgame@gmail.com',
-        pass: process.env.EMAIL_PASS
-    }
-});
-    
 const admin = require("firebase-admin");
-const { info } = require('console');
+
+let mailConfig;
+if(prod) {
+    mailConfig = {
+        host: 'smtp.zoho.com',
+        port: 465,
+        secure: true,
+        auth: {
+            user: process.env.EMAIL,
+            pass: process.env.EMAIL_PASS
+        }
+    };
+} else {
+    mailConfig = {
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false, 
+        auth: {
+            user: process.env.ETHEREAL_EMAIL, 
+            pass: process.env.ETHEREAL_EMAIL_PASS
+        }
+    };
+}
+const transporter = nodemailer.createTransport(mailConfig);
     
 admin.initializeApp({
     credential: admin.credential.cert(JSON.parse(process.env.DB_CRED)),
