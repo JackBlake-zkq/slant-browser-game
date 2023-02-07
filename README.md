@@ -1,4 +1,4 @@
-# slant.pro
+# slant
 
 This web app is built with vanilla Javascript and CSS on the frontend, and [Socket.io](https://socket.io/) for **all** backend functionality. It uses the 
 [Firebase Realtime Database](https://firebase.google.com/docs/database) to store level data, and user data, including hashed credentials 
